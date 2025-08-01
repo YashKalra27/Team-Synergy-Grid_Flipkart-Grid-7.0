@@ -9,20 +9,27 @@ class GeminiService {
   async getCorrectedSpelling(query) {
     try {
       const prompt = `
-        You are a spell checker for e-commerce search queries. 
+        You are an expert e-commerce search typo corrector. Fix spelling mistakes and complete partial words in product search queries.
         
-        Task: Fix spelling mistakes in the search query: "${query}"
+        Task: Correct the search query: "${query}"
         
-        Rules:
-        1. Only fix obvious spelling mistakes
-        2. Keep the original query if spelling seems correct
-        3. Maintain the same meaning and intent
-        4. Return only the corrected query, no explanation
+        E-commerce Context Rules:
+        1. Focus on common product categories: mobile phones, laptops, shoes, watches, clothing, electronics
+        2. Handle partial/truncated words (e.g., "mble" → "mobile", "lapto" → "laptop")
+        3. Fix common typing mistakes and missing letters
+        4. Consider brand names: iPhone, Samsung, Nike, Adidas, etc.
+        5. If query seems correct, return it unchanged
+        6. Return ONLY the corrected query, no explanation
         
         Examples:
-        - "sneekers for men" → "sneakers for men"
-        - "iphone 14 pro max" → "iphone 14 pro max" (no change needed)
+        - "mble" → "mobile"
+        - "lapto" → "laptop"
+        - "sneekers" → "sneakers"
+        - "iphne 15" → "iphone 15"
         - "adiddas shoes" → "adidas shoes"
+        - "wach" → "watch"
+        - "headfones" → "headphones"
+        - "tshrt" → "tshirt"
         
         Query to correct: "${query}"
         Corrected query:`;
@@ -437,6 +444,201 @@ class GeminiService {
     }
   }
 
+  async getExpectedCategories(query) {
+    try {
+      const prompt = `
+        You are an e-commerce category expert. Analyze the search query and determine the most relevant product categories.
+        
+        Query: "${query}"
+        
+        Task: Identify the primary product categories this query should search within to avoid irrelevant results.
+        
+        Rules:
+        1. Be specific and precise with category names
+        2. Use common e-commerce category terms
+        3. Return 1-3 most relevant categories only
+        4. Avoid broad categories unless necessary
+        5. Consider user intent and product type
+        
+        Examples:
+        Query: "sneakers for men" → ["footwear", "shoes", "men's shoes"]
+        Query: "iPhone 15 pro" → ["mobile phones", "smartphones", "electronics"]
+        Query: "gaming laptop" → ["laptops", "computers", "gaming"]
+        Query: "wireless headphones" → ["headphones", "audio", "electronics"]
+        Query: "women's dress" → ["women's clothing", "dresses", "fashion"]
+        
+        Return only a JSON array of category strings, no explanation:
+        ["category1", "category2", "category3"]`;
+
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text().trim();
+      
+      // Extract JSON array from response
+      const jsonMatch = text.match(/\[.*?\]/);
+      if (jsonMatch) {
+        const categories = JSON.parse(jsonMatch[0]);
+        return Array.isArray(categories) ? categories : [];
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('Category detection error:', error);
+      return []; // Return empty array if detection fails
+    }
+  }
+
+  async extractPriceConstraints(query) {
+    try {
+      const prompt = `
+        Extract price constraints from the given e-commerce search query. Return a JSON object with price filters.
+        
+        Query: "${query}"
+        
+        Rules:
+        1. Look for price-related keywords: under, below, less than, above, over, more than, between, from, to
+        2. Extract numeric values and convert to proper price constraints
+        3. Return JSON with price_min and/or price_max fields
+        4. If no price constraints found, return empty object {}
+        5. Handle currency symbols (₹, $, €) by removing them
+        6. Handle "k" suffix (5k = 5000)
+        
+        Examples:
+        - "shoes under 500" → {"price_max": 500}
+        - "shoes above 1000" → {"price_min": 1000}
+        - "shoes below 2k" → {"price_max": 2000}
+        - "phones between 10000 and 50000" → {"price_min": 10000, "price_max": 50000}
+        - "laptops from 30k to 80k" → {"price_min": 30000, "price_max": 80000}
+        - "headphones less than ₹5000" → {"price_max": 5000}
+        - "watches over $100" → {"price_min": 100}
+        - "just shoes" → {}
+        - "red shoes" → {}
+        
+        Query: "${query}"
+        JSON response:`;
+
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text().trim();
+      
+      try {
+        // Extract JSON from response
+        const jsonMatch = text.match(/\{[^}]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          return parsed;
+        }
+        return {};
+      } catch (parseError) {
+        console.error('Price extraction JSON parse error:', parseError);
+        return {};
+      }
+    } catch (error) {
+      console.error('Price extraction error:', error);
+      return {};
+    }
+  }
+
+  async translateToEnglish(query) {
+    try {
+      const prompt = `
+        You are a multilingual translator for e-commerce search queries. Translate the given query to English.
+        
+        Query: "${query}"
+        
+        Rules:
+        1. If the query is already in English, return it unchanged
+        2. Translate from any language (Hindi, Spanish, French, German, Chinese, Japanese, Arabic, etc.) to English
+        3. Focus on e-commerce/product terminology
+        4. Maintain the search intent and meaning
+        5. Return only the translated query, no explanation
+        6. Keep product names, brands, and technical terms accurate
+        
+        Examples:
+        - "जूते" → "shoes"
+        - "मोबाइल फोन" → "mobile phone"
+        - "zapatos para correr" → "running shoes"
+        - "ordinateur portable" → "laptop"
+        - "スマートフォン" → "smartphone"
+        - "أحذية رياضية" → "sports shoes"
+        - "耳机" → "headphones"
+        - "shoes" → "shoes" (already English)
+        
+        Query to translate: "${query}"
+        English translation:`;
+
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text().trim();
+      
+      return text || query;
+    } catch (error) {
+      console.error('Translation error:', error);
+      return query; // Return original query if translation fails
+    }
+  }
+
+  async filterRelevantProducts(query, products, maxResults = 50) {
+    try {
+      const prompt = `
+        You are an e-commerce relevance expert. Filter and rank products based on how relevant they are to the user's search query.
+        
+        User Query: "${query}"
+        
+        Products to evaluate: ${JSON.stringify(products.slice(0, 20), null, 2)}
+        
+        Task: 
+        1. Analyze each product's relevance to the search query
+        2. Filter out only completely irrelevant products (e.g., watches for "sneakers" query)
+        3. Rank remaining products by relevance score (1-10)
+        4. Return relevant products with minimum score 4/10 (more lenient)
+        5. Limit results to top ${maxResults} most relevant products
+        
+        Relevance Criteria (be more inclusive):
+        - Product name contains query keywords or similar terms
+        - Category has some alignment with search intent
+        - Brand relevance (if brand mentioned in query)
+        - Feature/attribute partial matching
+        - Semantic similarity or related products
+        - Even loosely related products should get 4+ score
+        
+        Scoring Guidelines:
+        - 9-10: Perfect match (exact product type + brand)
+        - 7-8: Very good match (right category + good features)
+        - 5-6: Good match (right category or related features)
+        - 4: Acceptable match (some relevance, keep it)
+        - 1-3: Poor match (filter out only these)
+        
+        Return as JSON array with relevance scores:
+        [
+          {
+            "productId": "original product ID",
+            "relevanceScore": 6.5,
+            "relevanceReason": "Good match - running shoes for sneakers query",
+            "matchType": "exact|semantic|category|brand|related"
+          }
+        ]
+        
+        Only include products with relevance score >= 4.0. Be more inclusive to provide better user experience.`;
+
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text().trim();
+      
+      // Extract JSON array from response
+      const jsonMatch = text.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        const relevantProducts = JSON.parse(jsonMatch[0]);
+        return Array.isArray(relevantProducts) ? relevantProducts : [];
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('Product relevance filtering error:', error);
+      return []; // Return empty array if filtering fails
+    }
+  }
+
   async generateSmartFilters(query, availableFilters) {
     try {
       const prompt = `
@@ -491,6 +693,10 @@ module.exports = {
   getCorrectedSpelling: (query) => geminiService.getCorrectedSpelling(query),
   getConceptualSearchKeywords: (query) => geminiService.getConceptualSearchKeywords(query),
   extractQueryIntent: (query) => geminiService.extractQueryIntent(query),
+  getExpectedCategories: (query) => geminiService.getExpectedCategories(query),
+  extractPriceConstraints: (query) => geminiService.extractPriceConstraints(query),
+  translateToEnglish: (query) => geminiService.translateToEnglish(query),
+  filterRelevantProducts: (query, products, maxResults) => geminiService.filterRelevantProducts(query, products, maxResults),
   generateProductRecommendations: (query, products) => geminiService.generateProductRecommendations(query, products),
   enhanceProductDescriptions: (products, query) => geminiService.enhanceProductDescriptions(products, query),
   analyzeSearchTrends: (queries) => geminiService.analyzeSearchTrends(queries),
