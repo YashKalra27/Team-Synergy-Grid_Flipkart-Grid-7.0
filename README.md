@@ -26,6 +26,24 @@ This is an **AI-enhanced e-commerce search system** built for Flipkart Grid 7.0 
 
 ---
 
+## 🎬 **Demo Video**
+
+Watch our comprehensive demo showcasing all the AI-powered features:
+
+[![AI-Powered Search Demo](https://img.youtube.com/vi/nVe9cf89gKg/0.jpg)](https://www.youtube.com/watch?v=nVe9cf89gKg)
+
+**[🎥 View Full Demo on YouTube](https://www.youtube.com/watch?v=nVe9cf89gKg)**
+
+The demo covers:
+- Multilingual search capabilities
+- Smart price extraction and filtering
+- AI-powered typo correction
+- Category detection and relevance filtering
+- Real-time autosuggest functionality
+- Performance optimizations
+
+---
+
 ## 🛠 **Tech Stack**
 
 ### **Frontend**
@@ -738,24 +756,6 @@ For support and questions:
 ---
 
 **This AI-enhanced search system represents a significant advancement in e-commerce search technology, combining traditional search techniques with cutting-edge AI to deliver a world-class user experience that's both intelligent and performant. The system is production-ready and showcases the future of e-commerce search technology!** 🚀
-
----
-
-## 🎬 **Demo Video**
-
-Watch our comprehensive demo showcasing all the AI-powered features:
-
-[![AI-Powered Search Demo](https://img.youtube.com/vi/nVe9cf89gKg/0.jpg)](https://www.youtube.com/watch?v=nVe9cf89gKg)
-
-**[🎥 View Full Demo on YouTube](https://www.youtube.com/watch?v=nVe9cf89gKg)**
-
-The demo covers:
-- Multilingual search capabilities
-- Smart price extraction and filtering
-- AI-powered typo correction
-- Category detection and relevance filtering
-- Real-time autosuggest functionality
-- Performance optimizations
 
 ---
 
