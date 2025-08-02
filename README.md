@@ -2,27 +2,42 @@
 
 ## 📋 **Table of Contents**
 1. [Project Overview](#-project-overview)
-2. [Tech Stack](#-tech-stack)
-3. [System Architecture](#-system-architecture)
-4. [Search Results Page (SRP) Implementation](#-search-results-page-srp-implementation)
-5. [Autosuggest Implementation](#-autosuggest-implementation)
-6. [New AI Features Added](#-new-ai-features-added)
-7. [Detailed Workflow](#-detailed-workflow)
-8. [Backend Architecture Deep Dive](#-backend-architecture-deep-dive)
-9. [Key Achievements](#-key-achievements)
+2. [Demo Video](#-demo-video)
+3. [Tech Stack](#-tech-stack)
+4. [System Architecture](#-system-architecture)
+5. [Search Results Page (SRP) Implementation](#-search-results-page-srp-implementation)
+6. [Autosuggest Implementation](#-autosuggest-implementation)
+7. [AI Features & Innovations](#-ai-features--innovations)
+8. [Detailed Workflow](#-detailed-workflow)
+9. [Backend Architecture Deep Dive](#-backend-architecture-deep-dive)
+10. [Key Achievements](#-key-achievements)
 
 ---
 
 ## 🎯 **Project Overview**
 
-This is an **AI-enhanced e-commerce search system** built for Flipkart Grid 7.0 that provides intelligent product search with multilingual support, smart price extraction, and advanced relevance filtering. The system combines traditional search techniques with cutting-edge AI to deliver a world-class user experience.
+### **The Flipkart Journey: A Legacy of Bold Leaps**
 
-### **Key Capabilities:**
-- 🌍 **Multilingual Search**: Support for 15+ languages including Hindi, Spanish, French, Chinese, Arabic
+Flipkart's journey is a testament to the power of taking audacious leaps. It began in 2007 when two young engineers took a leap of faith with an investment of just ₹400,000, creating what would become one of India's first unicorns. This initial step was just the first in a series of bold moves; from introducing Cash on Delivery in 2010 to creating the Big Billion Days in 2014 and foraying into quick commerce in 2024, every leap was about more than just growth.
+
+At its core, each innovation was a solution, a way of solving real problems to empower millions of lives. Now, as we look to the future, we invite you to continue this legacy. It will be your leaps that keep us going, as we dare to maximize and fulfill our purpose of **"Empowering Every Indian's Dream by Delivering Value through Innovation in Technology and Commerce."**
+
+### **The Vision: Every Commerce Search Begins with Flipkart**
+
+Flipkart search operates with the goal that **'every commerce search in India should begin with Flipkart'**. To achieve that vision, we need our search systems to be really great at ensuring that users find what they are looking for with the least effort possible and with the most delightful shopping experience.
+
+### **Our Solution: AI-Enhanced Search Systems**
+
+This project represents our contribution to Flipkart's vision through an **AI-enhanced e-commerce search system** that addresses the core challenges outlined in Flipkart Grid 7.0. Our solution encompasses both **Autosuggest** and **Search Results Page (SRP)** systems, designed to optimize every step of the user's shopping journey.
+
+### **Key Innovations:**
+- 🌍 **Multilingual Search**: Breaking language barriers with support for 15+ languages
 - 💰 **Smart Price Understanding**: Natural language price constraints ("shoes under 500")
 - 🤖 **AI-Powered Intelligence**: Gemini API integration for typo correction and relevance
 - ⚡ **Performance Optimized**: Smart AI filtering with fallback mechanisms
-- 🎯 **Enhanced Relevance**: Dynamic category detection and cross-category prevention
+- 🎯 **Enhanced Relevance**: Dynamic category detection preventing cross-category contamination
+- 🔍 **Intent Understanding**: Advanced query interpretation for precise product retrieval
+- 📊 **Intelligent Ranking**: ML-driven product ranking for optimal user engagement
 
 ---
 
@@ -195,7 +210,7 @@ router.post('/autosuggest-click', async (req, res) => {
 
 ---
 
-## 🆕 **New AI Features Added**
+## 🆕 **AI Features & Innovations**
 
 ### **1. Multilingual Search Support** 🌍
 ```javascript
