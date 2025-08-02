@@ -1,6 +1,7 @@
 interface QueryFilters {
   gender: string | null;
   category: string | null;
+  brand: string | null;
   price: {
     gte?: number;
     lte?: number;
@@ -17,6 +18,7 @@ export function extractFilters(query: string): QueryFilters {
   const filters: QueryFilters = {
     gender: null,
     category: null,
+    brand: null,
     price: {},
     rating: {},
     keywords: []
@@ -27,11 +29,32 @@ export function extractFilters(query: string): QueryFilters {
   if (query.includes("women")) filters.gender = "women";
   if (query.includes("kids")) filters.gender = "kids";
 
+  // Brand detection
+  const brands = [
+    "samsung", "apple", "iphone", "xiaomi", "redmi", "oneplus", "oppo", "vivo", "realme",
+    "nike", "adidas", "puma", "reebok", "under armour", "new balance",
+    "titan", "fastrack", "casio", "fossil", "rolex", "omega",
+    "ray-ban", "oakley", "prada", "gucci", "versace", "dolce gabbana",
+    "hp", "dell", "lenovo", "asus", "acer", "msi", "apple macbook",
+    "lg", "sony", "panasonic", "whirlpool", "bosch", "siemens",
+    "puma", "adidas", "nike", "reebok", "under armour", "new balance",
+    "boat", "jbl", "sony", "bose", "sennheiser", "audio technica",
+    "canon", "nikon", "sony", "fujifilm", "gopro", "dji"
+  ];
+  
+  for (const brand of brands) {
+    if (query.includes(brand)) {
+      filters.brand = brand;
+      break;
+    }
+  }
+
   // Category keywords (expandable list)
   const categories = [
     // Main categories from dataset
     "clothing", "jewellery", "footwear", "mobile phones", "mobiles & accessories", 
     "automotive", "home decor", "home decor & festive needs", "home furnishing", "computers",
+    "furniture", "electronics", "appliances", "sports", "books", "toys", "beauty",
     // Sub-categories and specific products
     "shoes", "tops", "mobiles", "jeans", "sarees", "laptops",
     "sneakers", "t-shirt", "laptop bag", "watch", "headphone", "speaker",
@@ -54,7 +77,17 @@ export function extractFilters(query: string): QueryFilters {
     "musical instruments", "sports equipment", "travel accessories", "luggage",
     "art supplies", "craft supplies", "hobby kits", "drones",
     "car accessories", "bike accessories", "pet supplies", "health supplements",
-    "face masks", "hand sanitizers", "backpacks", "bags", "laptop bags"
+    "face masks", "hand sanitizers", "backpacks", "bags", "laptop bags",
+    // Furniture specific categories
+    "chair", "table", "bed", "sofa set", "dining set", "office chair",
+    "study chair", "computer chair", "gaming chair", "recliner", "bean bag",
+    "stool", "bench", "ottoman", "footstool", "side table", "coffee table",
+    "dining table", "study table", "office desk", "computer desk", "gaming desk",
+    "bed frame", "bunk bed", "trundle bed", "day bed", "futon", "mattress",
+    "wardrobe", "almirah", "cupboard", "bookshelf", "shelf", "rack",
+    "chest of drawers", "dresser", "mirror", "wall mirror", "floor mirror",
+    "shoe rack", "shoe cabinet", "tv unit", "tv stand", "entertainment unit",
+    "showcase", "display cabinet", "filing cabinet", "locker", "storage unit"
   ];
   
   for (const cat of categories) {

@@ -3,6 +3,7 @@ import { ChevronDown } from 'lucide-react';
 import { useSearch } from '../context/SearchContext';
 
 const sortOptions = [
+  { value: 'relevance', label: 'Relevance' },
   { value: 'popularity', label: 'Popularity' },
   { value: 'price-high-low', label: 'Price: High to Low' },
   { value: 'price-low-high', label: 'Price: Low to High' },

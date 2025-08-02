@@ -144,57 +144,72 @@ exports.dynamicSearch = async (req, res) => {
     return res.status(400).json({ error: "Query is required" });
   }
 
-  // Step 1: Translate any language to English first
-  const originalQuery = q;
-  const translatedQuery = await translateToEnglish(q);
+  // Check if explicit filters are applied (skip AI for efficiency)
+  const hasUrlFilters = !!(category || brand || price_lt || price_gt || rating_gte);
+  const isSimpleQuery = q.trim().split(' ').length <= 2; // Simple 1-2 word queries
   
-  // Step 2: Extract price constraints from the query using dynamic parser (faster than Gemini AI)
+  console.log(`🔍 Filter Analysis: hasUrlFilters=${hasUrlFilters}, isSimpleQuery=${isSimpleQuery}`);
+
+  let translatedQuery = q;
+  let correctedQuery = q;
+  let extractedPriceConstraints = {};
+  let expectedCategories = null;
+
+  // Always extract price constraints first to determine if we have implicit filters
+  const parsedFilters = extractFilters(q);
+  const queryKeywords = parsedFilters.keywords.join(' ');
+  extractedPriceConstraints = parsedFilters.price || {};
   
-  // Debug: Test the dynamic parser directly with the exact query
-  console.log(`🧪 Testing dynamic parser with query: "${translatedQuery}"`);
-  const testResult = extractFilters("shoes under 5000");
-  console.log(`🧪 Direct test result for "shoes under 5000":`, testResult);
+  // Check for both URL filters AND extracted price constraints
+  const hasExplicitFilters = hasUrlFilters || Object.keys(extractedPriceConstraints).length > 0;
   
-  // Debug: Test regex patterns directly
-  const testQuery = "shoes under 5000";
-  const priceUnderMatch = testQuery.match(/(?:under|less than|below)\s*(\d+)/);
-  console.log(`🧪 Regex test for "under" pattern:`, priceUnderMatch);
-  if (priceUnderMatch) {
-    console.log(`🧪 Extracted price value:`, parseInt(priceUnderMatch[1]));
+  console.log(`💰 Extracted price constraints:`, extractedPriceConstraints);
+  console.log(`🔍 Final filter analysis: hasExplicitFilters=${hasExplicitFilters} (URL: ${hasUrlFilters}, Price: ${Object.keys(extractedPriceConstraints).length > 0})`);
+
+  // If there are no explicit filters, use AI to enhance the keywords
+  if (!hasExplicitFilters) {
+    console.log(`🤖 Using Gemini AI for query enhancement on keywords: "${queryKeywords}"`);
+
+    // Step 1: Translate the core keywords to English if needed
+    const translatedKeywords = await translateToEnglish(queryKeywords);
+
+    // Step 2: Apply typo correction to the translated keywords
+    correctedQuery = await getCorrectedSpelling(translatedKeywords);
+
+    console.log(`🌍 Original keywords: "${queryKeywords}", 🔄 Translated: "${translatedKeywords}", 🤖 Corrected: "${correctedQuery}"`);
+  } else {
+    // If filters are present, skip AI and use the extracted keywords directly
+    console.log(`⚡ Skipping Gemini AI - explicit filters detected. Using keywords: "${queryKeywords}"`);
+    correctedQuery = queryKeywords;
   }
-  
-  const parsedFilters = extractFilters(translatedQuery);
-  const extractedPriceConstraints = parsedFilters.price || {};
-  
-  // Debug: Log the full parsed filters to see what dynamic parser returns
-  console.log(`🔍 Dynamic parser full output:`, parsedFilters);
-  console.log(`🔍 Dynamic parser price object:`, parsedFilters.price);
-  console.log(`🔍 Extracted price constraints:`, extractedPriceConstraints);
-  
-  // Step 3: Apply typo correction to the translated query
-  const correctedQuery = await getCorrectedSpelling(translatedQuery);
-  const searchQuery = correctedQuery || translatedQuery;
-  
-  console.log(`🌍 Original query: "${originalQuery}", 🔄 Translated: "${translatedQuery}", 🤖 Corrected: "${correctedQuery}"`);  
-  
-  // Log extracted price constraints
-  if (Object.keys(extractedPriceConstraints).length > 0) {
-    console.log(`💰 Extracted price constraints:`, extractedPriceConstraints);
-  }
+
+  // The final search query is the corrected set of keywords
+  const searchQuery = correctedQuery;
   
   // Merge extracted price constraints with URL parameters (URL params take precedence)
   const finalPriceMin = price_gt || extractedPriceConstraints.gte;
   const finalPriceMax = price_lt || extractedPriceConstraints.lte;
-  
+
+  // Debug: Show extracted, merged, and raw price constraints
+  console.log('🔎 [DEBUG] Extracted price constraints:', extractedPriceConstraints);
+  console.log('🔎 [DEBUG] URL price_gt:', price_gt, 'URL price_lt:', price_lt);
+  console.log('🔎 [DEBUG] Final price filter: Min:', finalPriceMin, 'Max:', finalPriceMax);
+
   if (finalPriceMin || finalPriceMax) {
+    if (finalPriceMin && finalPriceMax && Number(finalPriceMax) < Number(finalPriceMin)) {
+      console.warn('⚠️ [WARNING] Price max is less than min. Check extraction logic!');
+    }
+    if (!finalPriceMin || !finalPriceMax) {
+      console.warn('⚠️ [WARNING] Only one bound present for a "between" query.');
+    }
     console.log(`💰 Final price constraints - Min: ${finalPriceMin || 'none'}, Max: ${finalPriceMax || 'none'}`);
-  }  
+  }
 
   // Store the AI-corrected query in database for better suggestions
   try {
-    const queryToStore = correctedQuery && correctedQuery !== originalQuery ? correctedQuery : originalQuery;
+    const queryToStore = correctedQuery && correctedQuery !== q ? correctedQuery : q;
     await updateAndSyncQuery(queryToStore.trim());
-    console.log(`[Dynamic Search] Stored enhanced query: "${queryToStore.trim()}" (original: "${originalQuery.trim()}")`);
+    console.log(`[Dynamic Search] Stored enhanced query: "${queryToStore.trim()}" (original: "${q.trim()}")`);
   } catch (error) {
     console.error(`[Dynamic Search] Failed to store query "${queryToStore.trim()}":`, error);
     // Don't fail the search if storing fails
@@ -219,13 +234,13 @@ exports.dynamicSearch = async (req, res) => {
   if (finalPriceMin || finalPriceMax) {
     const priceRange = {};
     if (finalPriceMin) {
-      priceRange.gte = parseFloat(finalPriceMin); // Use gte for "above/over" queries
+      priceRange.gte = parseFloat(finalPriceMin);
     }
     if (finalPriceMax) {
-      priceRange.lte = parseFloat(finalPriceMax); // Use lte for "under/below" queries
+      priceRange.lte = parseFloat(finalPriceMax);
     }
     filter_clauses.push({ range: { price: priceRange } });
-    console.log(`💰 Applied price filter:`, { range: { price: priceRange } });
+    console.log(`💰 [DEBUG] Applied price filter:`, { range: { price: priceRange } });
   }
   
   if (rating_gte) {
@@ -236,13 +251,31 @@ exports.dynamicSearch = async (req, res) => {
   const sort_options = getSortOptions(sortBy, '');
 
   try {
-    console.log(`🔍 Searching for: "${originalQuery}" (corrected: "${searchQuery}")`);
+    console.log(`🔍 Searching for: "${q}" (corrected: "${searchQuery}")`);
     
-    // Use Gemini AI for dynamic category detection
-    const expectedCategories = await getExpectedCategories(searchQuery);
-    console.log(`🤖 Gemini detected categories for "${searchQuery}":`, expectedCategories);
-    
-    // Build strict search clauses with better relevance filtering
+    // Multi-layered Category Detection
+    let expectedCategories = [];
+    // 1. Prioritize local parser for speed and reliability
+    if (parsedFilters.category) {
+      expectedCategories = [parsedFilters.category];
+      console.log(`⚡️ [Dynamic Search] Using locally parsed category: ${parsedFilters.category}`);
+    } 
+    // 2. Fallback to AI for ambiguous queries if no local category and no explicit filters
+    else if (!hasExplicitFilters) {
+      try {
+        console.log(`🤖 [Dynamic Search] No local category found. Calling Gemini AI for category detection...`);
+        const detected = await getExpectedCategories(queryKeywords);
+        if (detected && detected.length > 0) {
+          expectedCategories = detected;
+          console.log(`🎯 [Dynamic Search] Gemini AI detected categories: ${expectedCategories.join(', ')}`);
+        }
+      } catch (error) {
+        console.error('[Dynamic Search] Gemini AI category detection error:', error);
+        // Gracefully continue without AI categories if the API fails
+      }
+    }
+    // (DEBUG) Print final filter_clauses before query
+    console.log('🔎 [DEBUG] Final filter_clauses:', JSON.stringify(filter_clauses, null, 2));
     const shouldClauses = [
       // Exact phrase match with corrected query (highest boost)
       {
@@ -287,10 +320,10 @@ exports.dynamicSearch = async (req, res) => {
     ];
     
     // Add original query if different from corrected
-    if (originalQuery !== searchQuery) {
+    if (q !== searchQuery) {
       shouldClauses.push({
         multi_match: {
-          query: originalQuery,
+          query: q,
           fields: ['name^3', 'brand^2', 'category^1'],
           type: 'phrase',
           boost: 8.0
@@ -298,6 +331,31 @@ exports.dynamicSearch = async (req, res) => {
       });
     }
     
+    const must_clauses = [
+      // Base relevance: ensure at least one strong match in name, brand, or category
+      {
+        multi_match: {
+          query: searchQuery,
+          fields: ['name^3', 'brand^2', 'category^1'],
+          type: 'best_fields',
+          minimum_should_match: '50%'
+        }
+      }
+    ];
+
+    // Add AI-detected categories to the SHOULD clause to boost relevance, not as a strict filter
+    if (expectedCategories.length > 0) {
+      shouldClauses.push({
+        "bool": {
+          "should": expectedCategories.map(cat => (
+            { "match": { "category": cat } }
+          )),
+          "minimum_should_match": 1,
+          "boost": 5.0 // Add a moderate boost for matching the detected category
+        }
+      });
+    }
+
     // Strict search with relevance threshold and must clause
     const searchBody = {
       from: (page - 1) * 100,
@@ -305,46 +363,15 @@ exports.dynamicSearch = async (req, res) => {
       min_score: 2.0, // Set minimum score threshold to filter out irrelevant results
       query: {
         bool: {
-          must: [
-            // Ensure at least one strong match in name, brand, or category
-            {
-              multi_match: {
-                query: searchQuery,
-                fields: ['name^3', 'brand^2', 'category^1'],
-                type: 'best_fields',
-                minimum_should_match: '50%'
-              }
-            }
-          ],
+          must: must_clauses,
           should: shouldClauses,
           minimum_should_match: 1,
-          filter: [
-            // Add all basic filters (price, rating, etc.)
-            ...filter_clauses,
-            // Add category filtering if categories are detected
-            ...(expectedCategories ? [
-              {
-                bool: {
-                  should: expectedCategories.map(cat => ({
-                    bool: {
-                      should: [
-                        { term: { 'category.keyword': cat } },
-                        { match_phrase: { category: cat } },
-                        { match: { category: { query: cat, boost: 2.0 } } }
-                    ],
-                      minimum_should_match: 1
-                    }
-                  })),
-                  minimum_should_match: 1
-                }
-              }
-            ] : [])
-          ]
+          filter: filter_clauses
         }
       },
-      sort: getSortOptions(sortBy)
+      sort: getSortOptions(sortBy, queryKeywords)
     };
-    
+
     console.log('Search body:', JSON.stringify(searchBody, null, 2));
 
     const response = await elasticClient.search({
@@ -361,62 +388,20 @@ exports.dynamicSearch = async (req, res) => {
     
     console.log(`Found ${results.length} results for query: "${q}"`);
     
-    // Smart AI filtering - skip for obvious category matches to improve speed and inclusivity
+    // Smart AI filter: filter_clausesches OR when explicit filters are applied
     const obviousCategoryQueries = ['shoes', 'mobile', 'phone', 'laptop', 'watch', 'shirt', 'dress', 'jeans', 'headphones', 'earphones'];
     const isObviousCategory = obviousCategoryQueries.some(cat => searchQuery.toLowerCase().includes(cat));
     
-    // Apply Gemini AI-based relevance filtering only for ambiguous queries
-    if (results.length > 0 && !isObviousCategory && results.length < 50) {
+    // Skip AI filtering if explicit filters are applied OR obvious category OR too many results
+    if (!hasExplicitFilters && !isObviousCategory && results.length > 0 && results.length < 50) {
       console.log(`🤖 Applying Gemini AI relevance filtering for ambiguous query...`);
+      
       try {
-        const relevantProductsData = await filterRelevantProducts(searchQuery, results, 50);
+        const relevantProducts = await filterRelevantProducts(searchQuery, results, 50);
         
-        if (relevantProductsData && relevantProductsData.length > 0) {
-          // Filter and reorder results based on Gemini AI relevance scores
-          const filteredResults = [];
-          
-          relevantProductsData.forEach(relevantProduct => {
-            const originalProduct = results.find(p => p.productId === relevantProduct.productId);
-            if (originalProduct) {
-              filteredResults.push({
-                ...originalProduct,
-                aiRelevanceScore: relevantProduct.relevanceScore,
-                aiRelevanceReason: relevantProduct.relevanceReason,
-                aiMatchType: relevantProduct.matchType
-              });
-            }
-          });
-          
-          // Sort by AI relevance score (highest first)
-          filteredResults.sort((a, b) => (b.aiRelevanceScore || 0) - (a.aiRelevanceScore || 0));
-          
-          // Check if AI filtering returned enough results
-          const minResults = Math.min(20, Math.floor(results.length * 0.2)); // At least 20% of original results or 20 products
-          
-          if (filteredResults.length >= minResults) {
-            results = filteredResults;
-            console.log(`🎯 Gemini AI filtered results: ${results.length} relevant products (from ${response.hits.hits.length} original)`);
-          } else {
-            // If AI filtering is too restrictive, keep original results but add AI scores to top products
-            console.log(`⚠️ AI filtering too restrictive (${filteredResults.length} results), keeping original ${results.length} results with AI enhancement`);
-            
-            // Add AI scores to the products that were analyzed
-            results.forEach(product => {
-              const aiData = relevantProductsData.find(ai => ai.productId === product.productId);
-              if (aiData) {
-                product.aiRelevanceScore = aiData.relevanceScore;
-                product.aiRelevanceReason = aiData.relevanceReason;
-                product.aiMatchType = aiData.matchType;
-              }
-            });
-            
-            // Sort by AI score if available, then by Elasticsearch score
-            results.sort((a, b) => {
-              const scoreA = a.aiRelevanceScore || (a._score / 2); // Normalize ES score
-              const scoreB = b.aiRelevanceScore || (b._score / 2);
-              return scoreB - scoreA;
-            });
-          }
+        if (relevantProducts && relevantProducts.length > 0) {
+          results = relevantProducts;
+          console.log(`🎯 Gemini AI filtered results: ${results.length} relevant products (from ${response.hits.hits.length} original)`);
         } else {
           console.log(`⚠️ Gemini AI found no relevant products, keeping original results`);
         }
@@ -424,6 +409,8 @@ exports.dynamicSearch = async (req, res) => {
         console.error('Gemini AI relevance filtering error:', error);
         console.log(`⚠️ Falling back to original Elasticsearch results`);
       }
+    } else if (hasExplicitFilters) {
+      console.log(`⚡ Skipping AI filtering - explicit filters applied, results already filtered by user preferences`);
     } else if (isObviousCategory) {
       console.log(`⚡ Skipping AI filtering for obvious category query "${searchQuery}" - keeping all ${results.length} results for better speed and inclusivity`);
     } else {

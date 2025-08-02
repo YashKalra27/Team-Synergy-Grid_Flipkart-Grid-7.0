@@ -13,44 +13,19 @@ function extractFilters(query) {
   if (query.includes("women")) filters.gender = "women";
   if (query.includes("kids")) filters.gender = "kids";
 
-  // Category keywords (expandable list)
-  const categories = [
-    "shoes", "tops", "mobiles", "jeans", "sarees", "laptops",
-    "sneakers", "t-shirt", "laptop bag", "watch", "headphone", "speaker",
-    "camera", "refrigerator", "washing machine", "air conditioner", "television",
-    "books", "perfume", "wallet", "sunglasses", "backpack", "power bank",
-    "keyboard", "mouse", "monitor", "printer", "router", "smartwatch",
-    "earbuds", "trimmer", "hair dryer", "mixer grinder", "pressure cooker",
-    "cookware", "bedsheet", "curtains", "sofa", "dining table", "wardrobe",
-    "mattress", "pillow", "blanket", "water bottle", "coffee maker", "air fryer",
-    "gas stove", "dinner set", "food processor", "juicer", "vacuum cleaner",
-    "iron box", "stabilizer", "running shoes", "dumbbell", "yoga mat",
-    "cricket bat", "football", "badminton racquet", "cycling", "gym bag",
-    "protein powder", "fitness tracker", "gaming console", "gaming headset",
-    "gaming mouse", "mechanical keyboard", "4k monitor", "led strip lights",
-    "skincare", "moisturizer", "face wash", "sunscreen", "shampoo", "conditioner",
-    "body lotion", "deodorant", "makeup kit", "foundation", "lipstick", "kajal",
-    "nail polish", "hair oil", "hair colour", "electric toothbrush", "grooming kit",
-    "epilator", "bookshelf", "study table", "bluetooth headphones", "iphone charger",
-    "tripod", "kids toys", "home decor", "kitchen appliances", "gardening tools",
-    "musical instruments", "sports equipment", "travel accessories", "luggage",
-    "jewellery", "art supplies", "craft supplies", "hobby kits", "drones",
-    "car accessories", "bike accessories", "pet supplies", "health supplements",
-    "face masks", "hand sanitizers"
-  ];
-  for (const cat of categories) {
-    if (query.includes(cat)) {
-      filters.category = cat;
-      break;
-    }
-  }
+
 
   // Price
+  const priceBetweenMatch = query.match(/between\s*(\d+)\s*and\s*(\d+)/);
   const priceUnderMatch = query.match(/(?:under|less than|below)\s*(\d+)/);
   const priceAboveMatch = query.match(/(?:above|greater than|more than)\s*(\d+)/);
-  const priceRangeMatch = query.match(/(\d+)\s*(?:to|-)\s*(\d+)/);
+  const priceRangeMatch = query.match(/(\d+)\s*(?:to|-)+(\d+)/);
   const priceExactMatch = query.match(/at\s*(\d+)/);
 
+  if (priceBetweenMatch) {
+    filters.price.gte = parseInt(priceBetweenMatch[1]);
+    filters.price.lte = parseInt(priceBetweenMatch[2]);
+  }
   if (priceUnderMatch) filters.price.lte = parseInt(priceUnderMatch[1]);
   if (priceAboveMatch) filters.price.gte = parseInt(priceAboveMatch[1]);
   if (priceRangeMatch) {

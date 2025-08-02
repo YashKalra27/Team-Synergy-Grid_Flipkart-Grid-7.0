@@ -1,0 +1,22 @@
+# Dependencies
+/node_modules
+/SRP-main/backend/node_modules
+
+# Build output
+/dist
+
+# Data files
+/SRP-main/backend/data/
+/SRP-main/backend/data.zip
+
+# Environment variables
+.env
+/SRP-main/backend/.env*
+
+# macOS
+.DS_Store
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

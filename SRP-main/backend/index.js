@@ -14,7 +14,8 @@ app.use(express.json());
 // Define Routes
 app.use('/api/search', require('./routes/searchRoutes'));
 app.use('/api/srp', require('./routes/srpDynamicRoutes'));
-app.use('/api/analytics', require('./routes/analyticsRoutes')); 
+app.use('/api/analytics', require('./routes/analyticsRoutes'));
+app.use('/api/test', require('./routes/testRoutes')); 
 app.get('/', (req, res) => res.send('API Running'));
 
 const PORT = process.env.PORT || 5001;

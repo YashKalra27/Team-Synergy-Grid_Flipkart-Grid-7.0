@@ -105,8 +105,12 @@ class MongoDataInsertion {
         numReviews = Math.floor(baseReviews * ratingMultiplier * (1 + Math.random()));
       }
 
+      // Calculate a popularity score
+      const popularity = (rating * 10) + numReviews;
+
       return {
-        pid: rawProduct.pid || `product_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        productId: rawProduct.uniq_id, // Use uniq_id as the unique productId
+        pid: rawProduct.uniq_id, // Ensure pid is also unique
         product_name: rawProduct.product_name?.trim() || 'Unknown Product',
         product_category_tree: categoryTree,
         retail_price: retailPrice,
@@ -119,6 +123,7 @@ class MongoDataInsertion {
         brand: rawProduct.brand?.trim() || 'Unknown Brand',
         product_specifications: rawProduct.product_specifications || '{}',
         numReviews: numReviews,
+        popularity: popularity,
         
         // Additional fields for better search
         category: mainCategory,
@@ -186,7 +191,7 @@ class MongoDataInsertion {
             this.totalProcessed++;
             
             const processedProduct = this.processProduct(data);
-            if (processedProduct) {
+            if (processedProduct && processedProduct.productId) {
               products.push(processedProduct);
             } else {
               this.errors++;

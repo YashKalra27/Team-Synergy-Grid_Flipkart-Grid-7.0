@@ -27,7 +27,7 @@ const SearchResults: React.FC = () => {
       setCurrentPage(1); // Reset to first page on new search
       console.log('Fetching products for query:', query);
       try {
-        const results = await searchRealProducts(query, {}, 'popularity'); // Always fetch with default sort
+        const results = await searchRealProducts(query, {}, sortBy); // Always fetch with default sort
         console.log('Search results received:', results.length, 'products');
         console.log('First few products:', results.slice(0, 3).map(p => ({ name: p.name, price: p.price, rating: p.rating })));
         setProducts(results);
@@ -43,7 +43,7 @@ const SearchResults: React.FC = () => {
     };
 
     fetchProducts();
-  }, [query]); // Remove sortBy from dependencies
+  }, [query, sortBy]); // Remove sortBy from dependencies
 
   const toggleFilters = () => {
     setShowFilters(!showFilters);
@@ -54,6 +54,9 @@ const SearchResults: React.FC = () => {
     const sortedProducts = [...productsToSort];
     
     switch (sortBy) {
+      case 'relevance':
+        // Keep original order (already sorted by relevance from backend)
+        return sortedProducts;
       case 'price-high-low':
         return sortedProducts.sort((a, b) => b.price - a.price);
       case 'price-low-high':

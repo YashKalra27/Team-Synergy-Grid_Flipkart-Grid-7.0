@@ -201,10 +201,10 @@ export const getAutoSuggestions = async (query: string): Promise<Suggestion[]> =
 export const searchProducts = async (
   query: string,
   filters: any = {},
-  sortBy: string = 'popularity'
+  sortBy: string = 'relevance'
 ): Promise<Product[]> => {
   try {
-    console.log('Searching for:', query);
+    console.log('Searching for:', query, 'with sortBy:', sortBy);
     
     // Parse the query for dynamic filters
     const parsedFilters = extractFilters(query);
@@ -214,6 +214,7 @@ export const searchProducts = async (
     // Build search parameters
     const params = new URLSearchParams();
     params.append('q', query);
+    params.append('sortBy', sortBy); // Add sortBy parameter
     
     // Add dynamic filters from query parsing
     if (parsedFilters.price.lte) {
@@ -260,7 +261,7 @@ export const searchProducts = async (
     }
     
     console.log('Search URL:', `/srp/search?${params.toString()}`);
-    console.log('Sort will be handled client-side');
+    console.log('Sort will be handled by backend with sortBy:', sortBy);
     
     // Try the dynamic search endpoint first
     let response;
@@ -326,9 +327,10 @@ export const getFeaturedProducts = async (): Promise<Product[]> => {
 // Analytics functions (optional, for tracking search behavior)
 export const logSearch = async (query: string) => {
   try {
-    await apiClient.post('/analytics/log-search', { query });
+    await apiClient.post('/search/log', { query });
+    console.log('Search logged:', query);
   } catch (error) {
-    console.error('Error logging search:', error);
+    console.error('Failed to log search:', error);
   }
 };
 

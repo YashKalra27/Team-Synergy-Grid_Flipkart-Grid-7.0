@@ -39,13 +39,25 @@ const ProductFilters: React.FC = () => {
         {hasActiveFilters && (
           <button
             onClick={clearAllFilters}
-            className="text-[#2874F0] text-sm hover:underline flex items-center"
+            className="text-[#2874F0] text-sm hover:underline flex items-center bg-blue-50 px-2 py-1 rounded"
           >
             <X className="h-4 w-4 mr-1" />
             Clear All
           </button>
         )}
       </div>
+
+      {/* Clear Filters Button - Always visible when there are active filters */}
+      {hasActiveFilters && (
+        <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+          <button
+            onClick={clearAllFilters}
+            className="w-full text-[#2874F0] text-sm font-medium hover:bg-blue-100 py-2 px-3 rounded border border-blue-200"
+          >
+            Clear All Filters
+          </button>
+        </div>
+      )}
 
       {/* Price Range */}
       <div className="mb-6">
@@ -79,7 +91,7 @@ const ProductFilters: React.FC = () => {
       <div className="mb-6">
         <h4 className="font-medium mb-3">Customer Rating</h4>
         <div className="space-y-2">
-          {[4, 3, 2, 1].map((rating) => (
+          {[0, 4, 3, 2, 1].map((rating) => (
             <label key={rating} className="flex items-center">
               <input
                 type="radio"
@@ -89,9 +101,15 @@ const ProductFilters: React.FC = () => {
                 className="text-[#2874F0] focus:ring-[#2874F0] mr-2"
               />
               <div className="flex items-center">
-                <span className="text-sm mr-1">{rating}</span>
-                <span className="text-[#FFD700]">★</span>
-                <span className="text-sm text-gray-500 ml-1">& above</span>
+                {rating === 0 ? (
+                  <span className="text-sm text-gray-500">All Ratings</span>
+                ) : (
+                  <>
+                    <span className="text-sm mr-1">{rating}</span>
+                    <span className="text-[#FFD700]">★</span>
+                    <span className="text-sm text-gray-500 ml-1">& above</span>
+                  </>
+                )}
               </div>
             </label>
           ))}

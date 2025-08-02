@@ -93,12 +93,13 @@ const SearchResultsPage = () => {
                         <select 
                             onChange={handleSortChange} 
                             className={styles.sortDropdown} 
-                            value={query.get('sortBy') || ''}
+                            value={query.get('sortBy') || 'relevance'}
                         >
-                            <option value="">Sort by Relevance</option>
-                            <option value="price:asc">Price: Low to High</option>
-                            <option value="price:desc">Price: High to Low</option>
-                            <option value="ratings:desc">Sort by Rating</option>
+                            <option value="relevance">Sort by Relevance</option>
+                            <option value="price-low-high">Price: Low to High</option>
+                            <option value="price-high-low">Price: High to Low</option>
+                            <option value="rating">Sort by Rating</option>
+                            <option value="popularity">Sort by Popularity</option>
                         </select>
                     </div>
 
